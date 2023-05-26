@@ -14,10 +14,13 @@ function App() {
   const [price, setPrice] = useState('');
   const webcamRef = useRef(null);
   const nameRef = useRef('');
-
+  const [url, setUrl] =  useState('https://super-polo-shirt-tick.cyclic.app'); //
 
   useEffect(() => {
-    fetch('https://super-polo-shirt-tick.cyclic.app/api/products')
+
+   
+
+    fetch(`${url}/api/products`)
       .then((response) => response.json())
       .then((data) => setProducts(data));
 
@@ -30,6 +33,8 @@ function App() {
         console.error('Грешка при вземане на текущата локация:', error);
       }
     );
+
+    
 
     Quagga.init(
       {
@@ -56,6 +61,26 @@ function App() {
       setBarcode(scannedBarcode);
     });
 
+
+    return () => {
+    if (!navigator.mediaDevices.enumerateDevices) {
+      console.log("enumerateDevices() not supported.");
+    } else {
+      // List cameras and microphones.
+      navigator.mediaDevices
+        .enumerateDevices()
+        .then((devices) => {
+          devices.forEach((device) => {
+            console.log(`${device.kind}: ${device.label} id = ${device.deviceId}`);
+          });
+        })
+        .catch((err) => {
+          console.error(`${err.name}: ${err.message}`);
+        });
+    }
+  }
+
+    
     return () => {
       Quagga.stop();
     };
@@ -63,7 +88,7 @@ function App() {
 
   const handleNameFieldClick = async () => {
     try {
-      const response = await fetch(`https://super-polo-shirt-tick.cyclic.app/api/products/${barcode}`);
+      const response = await fetch(`${url}/api/products/${barcode}`);
       if (response.ok) {
         const product = await response.json();
         setName(product.name);
@@ -78,7 +103,7 @@ function App() {
   
   const handleAddProduct = async () => {
     try {
-      const response = await fetch('https://super-polo-shirt-tick.cyclic.app/api/products', {
+      const response = await fetch(`${url}/api/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ barcode, name, price, store, location: currentLocation }),
@@ -89,7 +114,7 @@ function App() {
         return;
       }
   
-      const productsData = await fetch('https://super-polo-shirt-tick.cyclic.app/api/products').then((res) => res.json());
+      const productsData = await fetch(`${url}/api/products`).then((res) => res.json());
       setProducts(productsData);
       // Изчистване на полетата за въвеждане след успешно добавяне на продукта
       setBarcode('');
@@ -103,7 +128,7 @@ function App() {
 
   const handleDeleteProduct = async (productId) => {
     try {
-      const response = await fetch(`https://super-polo-shirt-tick.cyclic.app/api/products/${productId}`, {
+      const response = await fetch(`${url}/api/products/${productId}`, {
         method: 'DELETE',
       });
   
@@ -112,7 +137,7 @@ function App() {
         return;
       }
   
-      const productsData = await fetch('https://super-polo-shirt-tick.cyclic.app/api/products').then((res) => res.json());
+      const productsData = await fetch(`${url}/api/products`).then((res) => res.json());
       setProducts(productsData);
     } catch (error) {
       console.error('Грешка при изпращане на заявката', error);
