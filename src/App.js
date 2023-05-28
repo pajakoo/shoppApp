@@ -46,6 +46,7 @@ function App() {
 
         const constraints = {
           video: {
+            focusMode: 'continuous', // Enable continuous focus
             deviceId: backCamera && backCamera.deviceId,
             facingMode: 'environment', // Use the back camera
             width: { ideal: 1280 },
