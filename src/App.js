@@ -1,24 +1,23 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { BrowserMultiFormatReader, BarcodeFormat } from '@zxing/library';
 import GoogleMapReact from 'google-map-react';
-import Webcam from 'react-webcam';
-import Quagga from 'quagga';
-
-const Marker = () => <div className="marker"><span role="img">📍</span></div>;
 
 function App() {
-  const [products, setProducts] = useState([]);
-  const [currentLocation, setCurrentLocation] = useState(null);
+  const videoRef = useRef(null);
+  const codeReader = useRef(null);
   const [barcode, setBarcode] = useState('');
   const [name, setName] = useState('');
   const [store, setStore] = useState('');
   const [price, setPrice] = useState('');
-  const webcamRef = useRef(null);
-  const nameRef = useRef('');
+  const [products, setProducts] = useState([]);
+  const [currentLocation, setCurrentLocation] = useState(null);
   const [url, setUrl] =  useState('https://super-polo-shirt-tick.cyclic.app'); //
+  const Marker = () => <div className="marker"><span role="img">📍</span></div>;
+
 
   useEffect(() => {
 
-   
+           
 
     fetch(`${url}/api/products`)
       .then((response) => response.json())
@@ -34,57 +33,45 @@ function App() {
       }
     );
 
-    
+    codeReader.current = new BrowserMultiFormatReader();
 
-    Quagga.init(
-      {
-        inputStream: {
-          name: 'Live',
-          type: 'LiveStream',
-          target: webcamRef.current.video,
-        },
-        decoder: {
-          readers: ['ean_reader'],
-        },
-      },
-      (err) => {
-        if (err) {
-          console.error(err);
-        } else {
-          Quagga.start();
-        }
+    const startScanner = async () => {
+      try {
+        await codeReader.current.listVideoInputDevices();
+
+        const videoInputDevices = await codeReader.current.getVideoInputDevices();
+        const backCamera = videoInputDevices.find(
+          (device) => device.label.includes('back') || device.label.includes('rear')
+        );
+
+        const constraints = {
+          video: {
+            deviceId: backCamera && backCamera.deviceId,
+            facingMode: 'environment', // Use the back camera
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        };
+
+        codeReader.current.decodeFromVideoDevice(null, videoRef.current, (result) => {
+          if (result !== null) {
+            const barcode = result.getText();
+            setBarcode(barcode);
+            console.log('Scanned barcode:', barcode);
+          }
+        }, constraints);
+      } catch (error) {
+        console.error('Failed to start barcode scanner:', error);
       }
-    );
+    };
 
-    Quagga.onDetected((result) => {
-      const scannedBarcode = result.codeResult.code;
-      setBarcode(scannedBarcode);
-    });
-
+    startScanner();
 
     return () => {
-    if (!navigator.mediaDevices.enumerateDevices) {
-      console.log("enumerateDevices() not supported.");
-    } else {
-      // List cameras and microphones.
-      navigator.mediaDevices
-        .enumerateDevices()
-        .then((devices) => {
-          devices.forEach((device) => {
-            console.log(`${device.kind}: ${device.label} id = ${device.deviceId}`);
-          });
-        })
-        .catch((err) => {
-          console.error(`${err.name}: ${err.message}`);
-        });
-    }
-  }
-
-    
-    return () => {
-      Quagga.stop();
+      codeReader.current.reset();
     };
   }, []);
+
 
   const handleNameFieldClick = async () => {
     try {
@@ -100,7 +87,6 @@ function App() {
     }
   };
 
-  
   const handleAddProduct = async () => {
     try {
       const response = await fetch(`${url}/api/products`, {
@@ -108,12 +94,12 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ barcode, name, price, store, location: currentLocation }),
       });
-  
+
       if (!response.ok) {
         console.error('Грешка при създаване на продукта');
         return;
       }
-  
+
       const productsData = await fetch(`${url}/api/products`).then((res) => res.json());
       setProducts(productsData);
       // Изчистване на полетата за въвеждане след успешно добавяне на продукта
@@ -131,28 +117,65 @@ function App() {
       const response = await fetch(`${url}/api/products/${productId}`, {
         method: 'DELETE',
       });
-  
+
       if (!response.ok) {
         console.error('Грешка при изтриване на продукта');
         return;
       }
-  
+
       const productsData = await fetch(`${url}/api/products`).then((res) => res.json());
       setProducts(productsData);
     } catch (error) {
       console.error('Грешка при изпращане на заявката', error);
     }
   };
-  
+
   return (
-    <div>
-      <div>
+  <div>
       <h1>Barcode Scanner</h1>
-        <div style={{ width: '300px', margin: 'auto' }}>
-          <Webcam ref={webcamRef} width={300} height={200} />
-        </div>
+      <div style={{ width: '300px', margin: 'auto' }}>
+        <video ref={videoRef} width={300} height={200} autoPlay={true} />
       </div>
-      <div style={{ height: '400px', width: '100%' }}>
+   
+    <div>
+      <input
+        type="text"
+        value={barcode}
+        onChange={(e) => setBarcode(e.target.value)}
+        placeholder="Баркод"
+      />
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onClick={handleNameFieldClick}
+        placeholder="Име"
+      />
+      <input
+        type="text"
+        value={store}
+        onChange={(e) => setStore(e.target.value)}
+        placeholder="Магазин"
+      />
+      <input
+        type="text"
+        value={price}
+        onChange={(e) => setPrice(e.target.value)}
+        placeholder="Цена"
+      />
+      <button onClick={handleAddProduct}>Добави продукт</button>
+    </div>
+    <h2>Продукти</h2>
+    <ul>
+      {products.map((product, index) => (
+        <li key={index}>
+          <b>{product.barcode}</b> | {product.name} - {product.price} лв. - {product.store} - {product.location.lat}, {product.location.lng}
+          <button onClick={() => handleDeleteProduct(product._id)}>Изтрий</button>
+        </li>
+      ))}
+    </ul>
+
+     <div style={{ height: '400px', width: '100%' }}>
         {currentLocation && (
           <GoogleMapReact
             bootstrapURLKeys={{ key: 'AIzaSyBi-dNArY1fDxJXC5xesQU43hOW1U3NgRg' }}
@@ -164,46 +187,9 @@ function App() {
           </GoogleMapReact>
         )}
       </div>
-      <div>
-        <input
-          type="text"
-          value={barcode}
-          onChange={(e) => setBarcode(e.target.value)}
-          placeholder="Баркод"
-        />
-        <input
-          type="text"
-          ref={nameRef}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onClick={handleNameFieldClick}
-          placeholder="Име"
-        />
-        <input
-          type="text"
-          value={store}
-          onChange={(e) => setStore(e.target.value)}
-          placeholder="Магазин"
-        />
-        <input
-          type="text"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          placeholder="Цена"
-        />
-        <button onClick={handleAddProduct}>Добави продукт</button>
-      </div>
-      <h2>Продукти</h2>
-      <ul>
-        {products.map((product, index) => (
-          <li key={index}>
-            <b>{product.barcode}</b> | {product.name} - {product.price} лв. - {product.store} - {product.location.lat}, {product.location.lng}
-            <button onClick={() => handleDeleteProduct(product._id)}>Изтрий</button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+  </div>
+);
+
 }
 
 export default App;

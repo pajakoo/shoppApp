@@ -8,6 +8,8 @@
 /node_modules
 /.pnp
 .pnp.js
+src/index.tsx
+src/pajak
 
 # testing
 /coverage
