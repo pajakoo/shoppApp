@@ -134,7 +134,7 @@ function App() {
   <div>
       <h1>Barcode Scanner</h1>
       <div style={{ width: '300px', margin: 'auto' }}>
-        <video ref={videoRef} width={300} height={200} autoPlay={true} />
+        <video ref={videoRef} width={600} height={500} autoPlay={true} />
       </div>
    
     <div>
