@@ -13,6 +13,7 @@ function App() {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [url, setUrl] = useState('https://super-polo-shirt-tick.cyclic.app'); //
   const [selectedCamera, setSelectedCamera] = useState(null);
+  const [videoDevices, setVideoDevices] = useState([]);
   const Marker = () => <div className="marker"><span role="img">📍</span></div>;
 
   useEffect(() => {
@@ -20,10 +21,9 @@ function App() {
       .then((response) => response.json())
       .then((data) => setProducts(data));
 
-    navigator.mediaDevices.enumerateDevices().then((devices) => {
-      const videoDevices = devices.filter((device) => device.kind === 'videoinput');
-      setSelectedCamera(videoDevices[0].deviceId);
-    });
+      navigator.mediaDevices.enumerateDevices().then((devices) => {
+        const videoDevices = setVideoDevices(devices.filter((device) => device.kind === 'videoinput'));
+      });
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -129,13 +129,24 @@ function App() {
     }
   };
 
+  const handleCameraChange = (event) => {
+    setSelectedCamera(event.target.value);
+  };
+
+
   return (
     <div>
       <h1>Barcode Scanner</h1>
       <div style={{ width: '300px', margin: 'auto' }}>
         <video ref={videoRef} width={300} height={200} autoPlay={true} />
       </div>
-
+      <select value={selectedCamera} onChange={handleCameraChange}>
+        {videoDevices.map((device) => (
+          <option key={device.deviceId} value={device.deviceId}>
+            {device.label}
+          </option>
+        ))}
+      </select>
       <div>
         <input
           type="text"
