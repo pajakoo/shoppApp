@@ -1,9 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { BrowserMultiFormatReader, BarcodeFormat } from '@zxing/library';
 import GoogleMapReact from 'google-map-react';
-import { Select } from 'antd';
-
-const { Option } = Select;
 
 function App() {
   const videoRef = useRef(null);
@@ -14,7 +11,7 @@ function App() {
   const [price, setPrice] = useState('');
   const [products, setProducts] = useState([]);
   const [currentLocation, setCurrentLocation] = useState(null);
-  const [url, setUrl] = useState('https://super-polo-shirt-tick.cyclic.app');
+  const [url, setUrl] = useState('https://super-polo-shirt-tick.cyclic.app'); //
   const [selectedCamera, setSelectedCamera] = useState(null);
   const Marker = () => <div className="marker"><span role="img">📍</span></div>;
 
@@ -22,6 +19,11 @@ function App() {
     fetch(`${url}/api/products`)
       .then((response) => response.json())
       .then((data) => setProducts(data));
+
+    navigator.mediaDevices.enumerateDevices().then((devices) => {
+      const videoDevices = devices.filter((device) => device.kind === 'videoinput');
+      setSelectedCamera(videoDevices[0].deviceId);
+    });
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -32,59 +34,42 @@ function App() {
         console.error('Грешка при вземане на текущата локация:', error);
       }
     );
+  }, []);
 
-    codeReader.current = new BrowserMultiFormatReader();
+  useEffect(() => {
+    if (selectedCamera) {
+      codeReader.current = new BrowserMultiFormatReader();
 
-    const startScanner = async () => {
-      try {
-        await codeReader.current.listVideoInputDevices();
+      const startScanner = async () => {
+        try {
+          const constraints = {
+            video: {
+              aspectRatio: 1.7777777778,
+              focusMode: 'continuous', // Enable continuous focus
+              deviceId: selectedCamera,
+              width: { ideal: 200 },
+              height: { ideal: 100 },
+            },
+          };
 
-        const videoInputDevices = await codeReader.current.getVideoInputDevices();
+          await codeReader.current.decodeFromVideoDevice(null, videoRef.current, (result) => {
+            if (result !== null) {
+              const barcode = result.getText();
+              setBarcode(barcode);
+              console.log('Scanned barcode:', barcode);
+            }
+          }, constraints);
+        } catch (error) {
+          console.error('Failed to start barcode scanner:', error);
+        }
+      };
 
-        const handleCameraChange = (value) => {
-          setSelectedCamera(value);
-        };
+      startScanner();
 
-        return (
-          <Select onChange={handleCameraChange} defaultValue="default" style={{ width: 200 }}>
-            <Option value="default">Select a camera</Option>
-            {videoInputDevices.map((device) => (
-              <Option key={device.deviceId} value={device.deviceId}>
-                {device.label}
-              </Option>
-            ))}
-          </Select>
-        );
-      } catch (error) {
-        console.error('Failed to start barcode scanner:', error);
-      }
-    };
-
-    const constraints = {
-      video: {
-        aspectRatio: 1.7777777778,
-        focusMode: 'continuous',
-        deviceId: selectedCamera, // Use the selected camera device
-        facingMode: 'environment',
-        width: { ideal: 200 },
-        height: { ideal: 100 },
-      },
-    };
-
-    codeReader.current.decodeFromVideoDevice(null, videoRef.current, (result) => {
-      if (result !== null) {
-        const barcode = result.getText();
-        setBarcode(barcode);
-        console.log('Scanned barcode:', barcode);
-      }
-    }, constraints);
-
- 
-    startScanner();
-
-    return () => {
-      codeReader.current.reset();
-    };
+      return () => {
+        codeReader.current.reset();
+      };
+    }
   }, [selectedCamera]);
 
   const handleNameFieldClick = async () => {
@@ -183,8 +168,7 @@ function App() {
       <ul>
         {products.map((product, index) => (
           <li key={index}>
-            <b>{product.barcode}</b> | {product.name} - {product.price} лв. - {product.store} -{' '}
-            {product.location.lat}, {product.location.lng}
+            <b>{product.barcode}</b> | {product.name} - {product.price} лв. - {product.store} - {product.location.lat}, {product.location.lng}
             <button onClick={() => handleDeleteProduct(product._id)}>Изтрий</button>
           </li>
         ))}
