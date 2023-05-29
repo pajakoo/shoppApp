@@ -49,8 +49,8 @@ function App() {
             focusMode: 'continuous', // Enable continuous focus
             deviceId: backCamera && backCamera.deviceId,
             facingMode: 'environment', // Use the back camera
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 200 },
+            height: { ideal: 100 },
           },
         };
 
@@ -135,7 +135,7 @@ function App() {
   <div>
       <h1>Barcode Scanner</h1>
       <div style={{ width: '300px', margin: 'auto' }}>
-        <video ref={videoRef} width={600} height={500} autoPlay={true} />
+        <video ref={videoRef} width={300} height={200} autoPlay={true} />
       </div>
    
     <div>
