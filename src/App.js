@@ -1,6 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { BrowserMultiFormatReader, BarcodeFormat } from '@zxing/library';
 import GoogleMapReact from 'google-map-react';
+import { Select } from 'antd';
+
+const { Option } = Select;
 
 function App() {
   const videoRef = useRef(null);
@@ -11,14 +14,11 @@ function App() {
   const [price, setPrice] = useState('');
   const [products, setProducts] = useState([]);
   const [currentLocation, setCurrentLocation] = useState(null);
-  const [url, setUrl] =  useState('https://super-polo-shirt-tick.cyclic.app'); //
+  const [url, setUrl] = useState('https://super-polo-shirt-tick.cyclic.app');
+  const [selectedCamera, setSelectedCamera] = useState(null);
   const Marker = () => <div className="marker"><span role="img">📍</span></div>;
 
-
   useEffect(() => {
-
-           
-
     fetch(`${url}/api/products`)
       .then((response) => response.json())
       .then((data) => setProducts(data));
@@ -40,39 +40,52 @@ function App() {
         await codeReader.current.listVideoInputDevices();
 
         const videoInputDevices = await codeReader.current.getVideoInputDevices();
-        const backCamera = videoInputDevices.find(
-          (device) => device.label.includes('back') || device.label.includes('rear')
-        );
 
-        const constraints = {
-          video: {
-            focusMode: 'continuous', // Enable continuous focus
-            deviceId: backCamera && backCamera.deviceId,
-            facingMode: 'environment', // Use the back camera
-            width: { ideal: 200 },
-            height: { ideal: 100 },
-          },
+        const handleCameraChange = (value) => {
+          setSelectedCamera(value);
         };
 
-        codeReader.current.decodeFromVideoDevice(null, videoRef.current, (result) => {
-          if (result !== null) {
-            const barcode = result.getText();
-            setBarcode(barcode);
-            console.log('Scanned barcode:', barcode);
-          }
-        }, constraints);
+        return (
+          <Select onChange={handleCameraChange} defaultValue="default" style={{ width: 200 }}>
+            <Option value="default">Select a camera</Option>
+            {videoInputDevices.map((device) => (
+              <Option key={device.deviceId} value={device.deviceId}>
+                {device.label}
+              </Option>
+            ))}
+          </Select>
+        );
       } catch (error) {
         console.error('Failed to start barcode scanner:', error);
       }
     };
 
+    const constraints = {
+      video: {
+        aspectRatio: 1.7777777778,
+        focusMode: 'continuous',
+        deviceId: selectedCamera, // Use the selected camera device
+        facingMode: 'environment',
+        width: { ideal: 200 },
+        height: { ideal: 100 },
+      },
+    };
+
+    codeReader.current.decodeFromVideoDevice(null, videoRef.current, (result) => {
+      if (result !== null) {
+        const barcode = result.getText();
+        setBarcode(barcode);
+        console.log('Scanned barcode:', barcode);
+      }
+    }, constraints);
+
+ 
     startScanner();
 
     return () => {
       codeReader.current.reset();
     };
-  }, []);
-
+  }, [selectedCamera]);
 
   const handleNameFieldClick = async () => {
     try {
@@ -132,51 +145,52 @@ function App() {
   };
 
   return (
-  <div>
+    <div>
       <h1>Barcode Scanner</h1>
       <div style={{ width: '300px', margin: 'auto' }}>
         <video ref={videoRef} width={300} height={200} autoPlay={true} />
       </div>
-   
-    <div>
-      <input
-        type="text"
-        value={barcode}
-        onChange={(e) => setBarcode(e.target.value)}
-        placeholder="Баркод"
-      />
-      <input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onClick={handleNameFieldClick}
-        placeholder="Име"
-      />
-      <input
-        type="text"
-        value={store}
-        onChange={(e) => setStore(e.target.value)}
-        placeholder="Магазин"
-      />
-      <input
-        type="text"
-        value={price}
-        onChange={(e) => setPrice(e.target.value)}
-        placeholder="Цена"
-      />
-      <button onClick={handleAddProduct}>Добави продукт</button>
-    </div>
-    <h2>Продукти</h2>
-    <ul>
-      {products.map((product, index) => (
-        <li key={index}>
-          <b>{product.barcode}</b> | {product.name} - {product.price} лв. - {product.store} - {product.location.lat}, {product.location.lng}
-          <button onClick={() => handleDeleteProduct(product._id)}>Изтрий</button>
-        </li>
-      ))}
-    </ul>
 
-     <div style={{ height: '400px', width: '100%' }}>
+      <div>
+        <input
+          type="text"
+          value={barcode}
+          onChange={(e) => setBarcode(e.target.value)}
+          placeholder="Баркод"
+        />
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onClick={handleNameFieldClick}
+          placeholder="Име"
+        />
+        <input
+          type="text"
+          value={store}
+          onChange={(e) => setStore(e.target.value)}
+          placeholder="Магазин"
+        />
+        <input
+          type="text"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          placeholder="Цена"
+        />
+        <button onClick={handleAddProduct}>Добави продукт</button>
+      </div>
+      <h2>Продукти</h2>
+      <ul>
+        {products.map((product, index) => (
+          <li key={index}>
+            <b>{product.barcode}</b> | {product.name} - {product.price} лв. - {product.store} -{' '}
+            {product.location.lat}, {product.location.lng}
+            <button onClick={() => handleDeleteProduct(product._id)}>Изтрий</button>
+          </li>
+        ))}
+      </ul>
+
+      <div style={{ height: '400px', width: '100%' }}>
         {currentLocation && (
           <GoogleMapReact
             bootstrapURLKeys={{ key: 'AIzaSyBi-dNArY1fDxJXC5xesQU43hOW1U3NgRg' }}
@@ -188,9 +202,8 @@ function App() {
           </GoogleMapReact>
         )}
       </div>
-  </div>
-);
-
+    </div>
+  );
 }
 
 export default App;
