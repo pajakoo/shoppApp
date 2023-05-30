@@ -188,7 +188,7 @@ function App() {
       <div style={{ height: '400px', width: '100%' }}>
         {currentLocation && (
           <GoogleMapReact
-            bootstrapURLKeys={{ key: 'AIzaSyBi-dNArY1fDxJXC5xesQU43hOW1U3NgRg' }}
+            bootstrapURLKeys={{ key: process.env.REACT_APP_GOOGLE_API_KEY }}
             defaultCenter={currentLocation}
             center={currentLocation}
             defaultZoom={10}

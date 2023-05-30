@@ -11,6 +11,8 @@
 src/index.tsx
 src/pajak
 
+.env.development
+
 # testing
 /coverage
 
