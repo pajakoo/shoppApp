@@ -2,6 +2,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import { BrowserMultiFormatReader, BarcodeFormat } from '@zxing/library';
 import GoogleMapReact from 'google-map-react';
 
+import 'bootstrap/dist/css/bootstrap.min.css';
+
 function App() {
   const videoRef = useRef(null);
   const codeReader = useRef(null);
@@ -11,7 +13,7 @@ function App() {
   const [price, setPrice] = useState('');
   const [products, setProducts] = useState([]);
   const [currentLocation, setCurrentLocation] = useState(null);
-  const [url, setUrl] = useState('https://super-polo-shirt-tick.cyclic.app'); //
+  const [url, setUrl] = useState('http://localhost:3333'); // https://super-polo-shirt-tick.cyclic.app
   const [selectedCamera, setSelectedCamera] = useState(null);
   const [videoDevices, setVideoDevices] = useState([]);
   const Marker = () => <div className="marker"><span role="img">📍</span></div>;
@@ -21,9 +23,9 @@ function App() {
       .then((response) => response.json())
       .then((data) => setProducts(data));
 
-      navigator.mediaDevices.enumerateDevices().then((devices) => {
-        const videoDevices = setVideoDevices(devices.filter((device) => device.kind === 'videoinput'));
-      });
+    navigator.mediaDevices.enumerateDevices().then((devices) => {
+      const videoDevices = setVideoDevices(devices.filter((device) => device.kind === 'videoinput'));
+    });
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -133,29 +135,30 @@ function App() {
     setSelectedCamera(event.target.value);
   };
 
-
   return (
-    <div>
+    <div className="container">
       <h1>Barcode Scanner</h1>
-      <div style={{ width: '300px', margin: 'auto' }}>
+      <div className="d-flex justify-content-center mb-3">
         <video ref={videoRef} width={300} height={200} autoPlay={true} />
       </div>
-      <select value={selectedCamera} onChange={handleCameraChange}>
+      <select className="form-select mb-3" value={selectedCamera} onChange={handleCameraChange}>
         {videoDevices.map((device) => (
           <option key={device.deviceId} value={device.deviceId}>
             {device.label}
           </option>
         ))}
       </select>
-      <div>
+      <div className="mb-3">
         <input
           type="text"
+          className="form-control"
           value={barcode}
           onChange={(e) => setBarcode(e.target.value)}
           placeholder="Баркод"
         />
         <input
           type="text"
+          className="form-control"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onClick={handleNameFieldClick}
@@ -163,28 +166,34 @@ function App() {
         />
         <input
           type="text"
+          className="form-control"
           value={store}
           onChange={(e) => setStore(e.target.value)}
           placeholder="Магазин"
         />
         <input
           type="text"
+          className="form-control"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           placeholder="Цена"
         />
-        <button onClick={handleAddProduct}>Добави продукт</button>
+        <div className="d-flex justify-content-end">
+          <button className="btn btn-primary" onClick={handleAddProduct}>Добави продукт</button>
+        </div>
       </div>
       <h2>Продукти</h2>
-      <ul>
+      <ul className="list-group">
         {products.map((product, index) => (
-          <li key={index}>
-            <b>{product.barcode}</b> | {product.name} - {product.price} лв. - {product.store} - {product.location.lat}, {product.location.lng}
-            <button onClick={() => handleDeleteProduct(product._id)}>Изтрий</button>
+          <li className="list-group-item d-flex justify-content-between align-items-center" key={index}>
+            {product.date ? new Date(product.date).toLocaleDateString() : '-'}
+            <b>{product.barcode}</b>
+            {product.name} - {product.price} лв. - {product.store} - {product.location.lat}, {product.location.lng}
+            <button className="btn btn-danger" onClick={() => handleDeleteProduct(product._id)}>Изтрий</button>
           </li>
         ))}
       </ul>
-
+  
       <div style={{ height: '400px', width: '100%' }}>
         {currentLocation && (
           <GoogleMapReact
@@ -199,6 +208,7 @@ function App() {
       </div>
     </div>
   );
+  
 }
 
 export default App;
