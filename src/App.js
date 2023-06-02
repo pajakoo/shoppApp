@@ -13,7 +13,7 @@ function App() {
   const [price, setPrice] = useState('');
   const [products, setProducts] = useState([]);
   const [currentLocation, setCurrentLocation] = useState(null);
-  const [url, setUrl] = useState('http://localhost:3333'); // https://super-polo-shirt-tick.cyclic.app
+  const [url, setUrl] = useState('https://super-polo-shirt-tick.cyclic.app'); // 
   const [selectedCamera, setSelectedCamera] = useState(null);
   const [videoDevices, setVideoDevices] = useState([]);
   const Marker = () => <div className="marker"><span role="img">📍</span></div>;
