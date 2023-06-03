@@ -36,3 +36,24 @@
     transform: rotate(360deg);
   }
 }
+
+.container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+video {
+  width: 100%;
+  height: auto;
+}
+
+.form-control {
+  margin-bottom: 10px;
+}
+
+.btn-primary,
+.btn-danger {
+  width: 100%;
+  margin-top: 10px;
+}

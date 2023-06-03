@@ -1,8 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { BrowserMultiFormatReader, BarcodeFormat } from '@zxing/library';
 import GoogleMapReact from 'google-map-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
+import './App.css';
 
 function App() {
   const videoRef = useRef(null);
@@ -137,7 +140,7 @@ function App() {
 
   return (
     <div className="container">
-      <h1>Barcode Scanner</h1>
+      <h1>Добави продукт по баркод</h1>
       <div className="d-flex justify-content-center mb-3">
         <video ref={videoRef} width={300} height={200} autoPlay={true} />
       </div>
@@ -183,17 +186,43 @@ function App() {
         </div>
       </div>
       <h2>Продукти</h2>
+      
+      
       <ul className="list-group">
-        {products.map((product, index) => (
-          <li className="list-group-item d-flex justify-content-between align-items-center" key={index}>
-            {product.date ? new Date(product.date).toLocaleDateString() : '-'}
-            <b>{product.barcode}</b>
-            {product.name} - {product.price} лв. - {product.store} - {product.location.lat}, {product.location.lng}
-            <button className="btn btn-danger" onClick={() => handleDeleteProduct(product._id)}>Изтрий</button>
-          </li>
-        ))}
-      </ul>
-  
+  {products.map((product, index) => (
+    <li className="list-group-item" key={index}>
+      <div className="d-flex flex-column">
+        <div className="d-flex justify-content-between align-items-center">
+          <div>
+            <b>{product.barcode}</b><br/>
+            <span className="text-muted">
+              {product.date ? new Date(product.date).toLocaleDateString() : '-'}
+            </span>
+          </div>
+          <button className="btn btn-link" onClick={() => handleDeleteProduct(product._id)}>
+            <FontAwesomeIcon icon={faTrashAlt} />
+          </button>
+        </div>
+        <div className="mt-2">
+          <div>
+            <span className="font-weight-bold">Име:</span> {product.name}
+          </div>
+          <div>
+            <span className="font-weight-bold">Цена:</span> {product.price} лв.
+          </div>
+          <div>
+            <span className="font-weight-bold">Магазин:</span> {product.store}
+          </div>
+          <div>
+            <span className="font-weight-bold">Локация:</span> {product.location.lat}, {product.location.lng}
+          </div>
+        </div>
+      </div>
+    </li>
+  ))}
+</ul>
+<br/>
+
       <div style={{ height: '400px', width: '100%' }}>
         {currentLocation && (
           <GoogleMapReact
@@ -208,7 +237,6 @@ function App() {
       </div>
     </div>
   );
-  
 }
 
 export default App;
