@@ -14,7 +14,7 @@
     "google-map-react": "^2.2.1",
     "quagga": "0.12.1",
     "react": "^18.2.0",
-    "react-bootstrap-typeahead": "^6.2.2",
+    "react-bootstrap-typeahead": "^6.2.3",
     "react-dom": "^18.2.0",
     "react-qr-barcode-scanner": "^1.0.6",
     "react-scripts": "^2.1.3",

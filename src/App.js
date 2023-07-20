@@ -1,22 +1,28 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { BrowserMultiFormatReader, BarcodeFormat } from '@zxing/library';
+import { BrowserMultiFormatReader } from '@zxing/library';
 import GoogleMapReact from 'google-map-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrashAlt } from '@fortawesome/free-solid-svg-icons';
+import { Typeahead } from 'react-bootstrap-typeahead';
+import 'react-bootstrap-typeahead/css/Typeahead.css';
+import Quagga from 'quagga';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
 function App() {
+  const scannerContainerRef = useRef(null);
   const videoRef = useRef(null);
   const codeReader = useRef(null);
   const [barcode, setBarcode] = useState('');
+  const [newStoreName, setNewStoreName] = useState('');
   const [name, setName] = useState('');
   const [store, setStore] = useState('');
+  const [stores, setStores] = useState([]);
   const [price, setPrice] = useState('');
   const [products, setProducts] = useState([]);
   const [currentLocation, setCurrentLocation] = useState(null);
-  const [url, setUrl] = useState('https://super-polo-shirt-tick.cyclic.app'); // 
+  const [url, setUrl] = useState('http://localhost:3333'); //  https://super-polo-shirt-tick.cyclic.app
   const [selectedCamera, setSelectedCamera] = useState(null);
   const [videoDevices, setVideoDevices] = useState([]);
   const Marker = () => <div className="marker"><span role="img">📍</span></div>;
@@ -24,10 +30,23 @@ function App() {
   useEffect(() => {
     fetch(`${url}/api/products`)
       .then((response) => response.json())
-      .then((data) => setProducts(data));
+      .then((data) => setProducts(data))
+      .catch((error) => {
+        console.error('Error:', error);
+      });
+
+    fetch(`${url}/api/stores`)
+      .then((response) => response.json())
+      .then((data) => {
+        setStores(data);
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+      });
 
     navigator.mediaDevices.enumerateDevices().then((devices) => {
-      const videoDevices = setVideoDevices(devices.filter((device) => device.kind === 'videoinput'));
+      const videoDevices = devices.filter((device) => device.kind === 'videoinput');
+      setVideoDevices(videoDevices);
     });
 
     navigator.geolocation.getCurrentPosition(
@@ -51,7 +70,7 @@ function App() {
             video: {
               aspectRatio: 1.7777777778,
               focusMode: 'continuous', // Enable continuous focus
-              deviceId: selectedCamera,
+              // deviceId: selectedCamera,
               width: { ideal: 200 },
               height: { ideal: 100 },
             },
@@ -77,12 +96,55 @@ function App() {
     }
   }, [selectedCamera]);
 
+  useEffect(() => {
+    Quagga.init(
+      {
+        inputStream: {
+          name: 'Live',
+          type: 'LiveStream',
+          target: scannerContainerRef.current,
+          constraints: {
+            width: 320,
+            height: 200,
+            facingMode: 'environment', // use the rear camera
+          },
+        },
+        decoder: {
+          readers: ['ean_reader'], // specify the barcode format to scan (EAN in this case)
+        },
+      },
+      (err) => {
+        if (err) {
+          console.error(err);
+        } else {
+          Quagga.start();
+        }
+      }
+    );
+
+    Quagga.onDetected(async (result) => {
+      const scannedBarcode = result.codeResult.code;
+      setBarcode(scannedBarcode);
+      try {
+        const response = await fetch(`${url}/api/searchProduct?code=${scannedBarcode}`);
+        const responseData = await response.json();
+        setName(responseData.name);
+      } catch (error) {
+        console.error(error);
+      }
+    });
+
+    return () => {
+      Quagga.stop();
+    };
+  }, []);
+
   const handleNameFieldClick = async () => {
     try {
       const response = await fetch(`${url}/api/products/${barcode}`);
       if (response.ok) {
         const product = await response.json();
-        setName(product.name);
+        // setName(product.name);?????????????????????
       } else {
         console.error('Грешка при извличане на продукта');
       }
@@ -91,12 +153,34 @@ function App() {
     }
   };
 
+  const handleInputChange = (selected,e) => {
+    if (selected.length > 0) {
+      setStore(selected[0].name || '');
+    }  
+  };
+
   const handleAddProduct = async () => {
+      console.log(barcode, name, price, store,newStoreName, currentLocation);
     try {
+      if (store && !stores.some((s) => s.name === store)) {
+        // Create a new store if it doesn't exist in the database
+        const response = await fetch(`${url}/api/stores`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: store }),
+        });
+        if (!response.ok) {
+          console.error('Грешка при създаване на магазина');
+          return;
+        }
+        const newStoreData = await response.json();
+        setStores([...stores, newStoreData]);
+      }
+
       const response = await fetch(`${url}/api/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ barcode, name, price, store, location: currentLocation }),
+        body: JSON.stringify({ barcode, name, price, store: store || newStoreName, location: currentLocation }),
       });
 
       if (!response.ok) {
@@ -106,7 +190,7 @@ function App() {
 
       const productsData = await fetch(`${url}/api/products`).then((res) => res.json());
       setProducts(productsData);
-      // Изчистване на полетата за въвеждане след успешно добавяне на продукта
+      // Clear input fields after successfully adding the product
       setBarcode('');
       setName('');
       setPrice('');
@@ -144,6 +228,8 @@ function App() {
       <div className="d-flex justify-content-center mb-3">
         <video ref={videoRef} width={300} height={200} autoPlay={true} />
       </div>
+      <div ref={scannerContainerRef} />
+
       <select className="form-select mb-3" value={selectedCamera} onChange={handleCameraChange}>
         {videoDevices.map((device) => (
           <option key={device.deviceId} value={device.deviceId}>
@@ -167,15 +253,20 @@ function App() {
           onClick={handleNameFieldClick}
           placeholder="Име"
         />
-        <input
-          type="text"
-          className="form-control"
-          value={store}
-          onChange={(e) => setStore(e.target.value)}
+        <Typeahead
+          onInputChange={ (text) => setNewStoreName(text)}
+          id="storeTypeahead"
+          options={stores.filter((option) => option.name && typeof option.name === 'string')}
+          labelKey="name"
           placeholder="Магазин"
+          selected={store ? [store] : []}
+          onChange={handleInputChange}
+          filterBy={(option, props) =>
+            String(option.name).toLowerCase().includes(String(props.text).toLowerCase())
+          }
         />
         <input
-          type="text"
+          type="number"
           className="form-control"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
@@ -186,42 +277,41 @@ function App() {
         </div>
       </div>
       <h2>Продукти</h2>
-      
-      
+
       <ul className="list-group">
-  {products.map((product, index) => (
-    <li className="list-group-item" key={index}>
-      <div className="d-flex flex-column">
-        <div className="d-flex justify-content-between align-items-center">
-          <div>
-            <b>{product.barcode}</b><br/>
-            <span className="text-muted">
-              {product.date ? new Date(product.date).toLocaleDateString() : '-'}
-            </span>
-          </div>
-          <button className="btn btn-link" onClick={() => handleDeleteProduct(product._id)}>
-            <FontAwesomeIcon icon={faTrashAlt} />
-          </button>
-        </div>
-        <div className="mt-2">
-          <div>
-            <span className="font-weight-bold">Име:</span> {product.name}
-          </div>
-          <div>
-            <span className="font-weight-bold">Цена:</span> {product.price} лв.
-          </div>
-          <div>
-            <span className="font-weight-bold">Магазин:</span> {product.store}
-          </div>
-          <div>
-            <span className="font-weight-bold">Локация:</span> {product.location.lat}, {product.location.lng}
-          </div>
-        </div>
-      </div>
-    </li>
-  ))}
-</ul>
-<br/>
+        {products.map((product, index) => (
+          <li className="list-group-item" key={index}>
+            <div className="d-flex flex-column">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <b>{product.barcode}</b><br />
+                  <span className="text-muted">
+                    {product.date ? new Date(product.date).toLocaleDateString() : '-'}
+                  </span>
+                </div>
+                <button className="btn btn-link" onClick={() => handleDeleteProduct(product._id)}>
+                  <FontAwesomeIcon icon={faTrashAlt} />
+                </button>
+              </div>
+              <div className="mt-2">
+                <div>
+                  <span className="font-weight-bold">Име:</span> {product.name}
+                </div>
+                <div>
+                  <span className="font-weight-bold">Цена:</span> {product.price} лв.
+                </div>
+                <div>
+                  <span className="font-weight-bold">Магазин:</span> {product.store}
+                </div>
+                <div>
+                  <span className="font-weight-bold">Локация:</span> {product.location.lat}, {product.location.lng}
+                </div>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <br />
 
       <div style={{ height: '400px', width: '100%' }}>
         {currentLocation && (
